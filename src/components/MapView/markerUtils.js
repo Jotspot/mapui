@@ -9,7 +9,7 @@ export function createTeamMarkerEl(team) {
   // el height = ring + spike only (label is absolute, doesn't affect height)
   // With anchor:'bottom' the spike tip sits exactly on the coordinate
   const el = document.createElement('div')
-  el.style.cssText = 'position:relative;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;'
+  el.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer;width:68px;overflow:visible;'
 
   // Coloured ring
   const ring = document.createElement('div')
@@ -80,7 +80,7 @@ export function updateTeamMarkerEl(el, team) {
 
 export function createWaypointMarkerEl(waypoint) {
   const el = document.createElement('div')
-  el.style.cssText = 'position:relative;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;'
+  el.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;cursor:pointer;width:22px;'
 
   const head = document.createElement('div')
   head.style.cssText = [
