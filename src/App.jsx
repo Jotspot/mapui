@@ -16,71 +16,52 @@ export default function App() {
   const [placingWaypoint, setPlacingWaypoint] = useState(false)
   const [waypointPrefill, setWaypointPrefill] = useState(null)
 
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [animatingId, setAnimatingId] = useState(null)
-  const queueRef = useRef([])
+  // Multiple simultaneous animations
+  const [animatingIds, setAnimatingIds] = useState([])
+  const isPlaying = animatingIds.length > 0
 
-  const closeModal = () => setModal(null)
+  // Called when one animation finishes
+  const handleAnimateComplete = useCallback((finishedId) => {
+    setAnimatingIds((prev) => prev.filter((id) => id !== finishedId))
+  }, [])
 
-  const handleMapClick = useCallback(({ lng, lat }) => {
-    if (placingWaypoint) {
-      setPlacingWaypoint(false)
-      setWaypointPrefill((prev) => ({ ...prev, lng, lat }))
-      setModal({ type: 'waypoint' })
-    }
-  }, [placingWaypoint])
-
-  const startQueue = useCallback((routeIds) => {
-    if (!routeIds.length) return
-    routeIds.forEach((id) => updateRoute(id, { progress: 0 }))
-    queueRef.current = routeIds
-    setIsPlaying(true)
-    setAnimatingId(routeIds[0])
-  }, [updateRoute])
-
-  // Play only queued routes
+  // Play queued routes ALL AT ONCE (simultaneously)
   const handlePlayQueue = useCallback(() => {
     const queue = routes.filter((r) => r.queued)
-    startQueue(queue.map((r) => r.id))
-  }, [routes, startQueue])
+    if (!queue.length) return
+    queue.forEach((r) => updateRoute(r.id, { progress: 0 }))
+    setAnimatingIds(queue.map((r) => r.id))
+  }, [routes, updateRoute])
 
-  // Play every route in order
+  // Play every route simultaneously
   const handlePlayAll = useCallback(() => {
-    startQueue(routes.map((r) => r.id))
-  }, [routes, startQueue])
+    if (!routes.length) return
+    routes.forEach((r) => updateRoute(r.id, { progress: 0 }))
+    setAnimatingIds(routes.map((r) => r.id))
+  }, [routes, updateRoute])
 
-  // Play a single route immediately
+  // Play a single route
   const handlePlaySingle = useCallback((routeId) => {
-    queueRef.current = [routeId]
     updateRoute(routeId, { progress: 0 })
-    setIsPlaying(true)
-    setAnimatingId(routeId)
+    setAnimatingIds((prev) => prev.includes(routeId) ? prev : [...prev, routeId])
   }, [updateRoute])
 
   const handleStop = useCallback(() => {
-    setIsPlaying(false)
-    setAnimatingId(null)
-    queueRef.current = []
-  }, [])
-
-  const handleAnimateComplete = useCallback((finishedId) => {
-    const idx = queueRef.current.indexOf(finishedId)
-    const nextId = queueRef.current[idx + 1]
-    if (nextId) {
-      setAnimatingId(nextId)
-    } else {
-      setIsPlaying(false)
-      setAnimatingId(null)
-      queueRef.current = []
-    }
+    setAnimatingIds([])
   }, [])
 
   return (
     <>
       <MapView
         placingWaypoint={placingWaypoint}
-        onMapClick={handleMapClick}
-        animatingId={animatingId}
+        onMapClick={({ lng, lat }) => {
+          if (placingWaypoint) {
+            setPlacingWaypoint(false)
+            setWaypointPrefill({ lng, lat })
+            setModal({ type: 'waypoint' })
+          }
+        }}
+        animatingIds={animatingIds}
         onAnimateComplete={handleAnimateComplete}
         speeds={speeds}
       />
@@ -93,7 +74,7 @@ export default function App() {
       />
       <PlaybackBar
         isPlaying={isPlaying}
-        animatingId={animatingId}
+        animatingIds={animatingIds}
         onPlay={handlePlayQueue}
         onPlayAll={handlePlayAll}
         onStop={handleStop}
@@ -110,15 +91,15 @@ export default function App() {
         </div>
       )}
 
-      {modal?.type === 'team' && <AddTeamModal initial={modal.data} onClose={closeModal} />}
+      {modal?.type === 'team' && <AddTeamModal initial={modal.data} onClose={() => setModal(null)} />}
       {modal?.type === 'waypoint' && (
         <AddWaypointModal
           prefill={waypointPrefill}
-          onClose={closeModal}
+          onClose={() => setModal(null)}
           onStartPlacing={() => { setModal(null); setPlacingWaypoint(true) }}
         />
       )}
-      {modal?.type === 'route' && <AddRouteModal onClose={closeModal} />}
+      {modal?.type === 'route' && <AddRouteModal onClose={() => setModal(null)} />}
     </>
   )
 }

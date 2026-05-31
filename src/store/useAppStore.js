@@ -5,6 +5,7 @@ let idCounter = Date.now()
 const uid = () => (++idCounter).toString(36)
 
 const DEFAULT_SPEEDS = { flight: 6, driving: 4, transit: 5, walking: 8 } // seconds
+const DEFAULT_MAP_STYLE = { provider: 'openfreemap', openFreeStyle: 'liberty', appleToken: '' }
 
 const useAppStore = create(
   persist(
@@ -13,6 +14,7 @@ const useAppStore = create(
       waypoints: [],
       routes: [],
       speeds: { ...DEFAULT_SPEEDS },
+      mapStyle: { ...DEFAULT_MAP_STYLE },
 
       addTeam: (team) => set((s) => ({ teams: [...s.teams, { id: uid(), ...team }] })),
       updateTeam: (id, patch) =>
@@ -35,14 +37,17 @@ const useAppStore = create(
 
       setSpeed: (mode, secs) =>
         set((s) => ({ speeds: { ...s.speeds, [mode]: secs } })),
+      setMapStyle: (patch) =>
+        set((s) => ({ mapStyle: { ...s.mapStyle, ...patch } })),
     }),
     {
       name: 'jetlag-map-store',
-      partialize: (s) => ({ teams: s.teams, waypoints: s.waypoints, routes: s.routes, speeds: s.speeds }),
+      partialize: (s) => ({ teams: s.teams, waypoints: s.waypoints, routes: s.routes, speeds: s.speeds, mapStyle: s.mapStyle }),
       merge: (persisted, current) => ({
         ...current,
         ...persisted,
         speeds: { ...DEFAULT_SPEEDS, ...(persisted.speeds || {}) },
+        mapStyle: { ...DEFAULT_MAP_STYLE, ...(persisted.mapStyle || {}) },
         routes: (persisted.routes || []).map((r) => ({
           queued: false,
           progress: r.animationProgress ?? r.progress ?? 1,

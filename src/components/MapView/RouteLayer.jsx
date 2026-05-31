@@ -9,13 +9,14 @@ function makeGJ(coords) {
   return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
 }
 
-export default function RouteLayer({ map, routes, waypoints, animatingId, onAnimateComplete, speeds }) {
+export default function RouteLayer({ map, routes, waypoints, animatingIds = [], onAnimateComplete, speeds }) {
   const updateRoute = useAppStore((s) => s.updateRoute)
   const initializedRoutes = useRef(new Set())
-  const animators = useRef({})
-  const dotMarkers = useRef({})
+  const animators = useRef({})   // routeId → RouteAnimator
+  const dotMarkers = useRef({})  // routeId → maplibregl.Marker
+  const prevAnimatingIds = useRef([])
 
-  // Initialize new routes (add sources + layers)
+  // Initialize new routes (sources + layers)
   useEffect(() => {
     if (!map) return
     const waypointMap = Object.fromEntries(waypoints.map((w) => [w.id, w]))
@@ -25,7 +26,6 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
       const to = waypointMap[route.toWaypointId]
       if (!from || !to) return
 
-      // Fetch geometry if missing
       let coords = route.geometry
       if (!coords) {
         if (route.mode === 'flight') {
@@ -47,7 +47,6 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
 
       const tId = `${route.id}-traveled`
       const rId = `${route.id}-remaining`
-
       if (!map.getSource(tId)) map.addSource(tId, { type: 'geojson', data: makeGJ(traveled) })
       if (!map.getSource(rId)) map.addSource(rId, { type: 'geojson', data: makeGJ(remaining) })
 
@@ -64,11 +63,11 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
     })
   }, [map, routes, waypoints])
 
-  // Sync static progress changes (slider) — skip if currently animating this route
+  // Sync static progress changes (slider drags) for non-animating routes
   useEffect(() => {
     if (!map) return
     routes.forEach((route) => {
-      if (route.id === animatingId) return
+      if (animatingIds.includes(route.id)) return
       if (!initializedRoutes.current.has(route.id)) return
       const coords = route.geometry
       if (!coords) return
@@ -78,10 +77,8 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
       const tipIdx = Math.floor(t * (coords.length - 1))
       const remaining = t >= 1 ? [] : [traveled[traveled.length - 1], ...coords.slice(tipIdx + 1)]
 
-      const tSrc = map.getSource(`${route.id}-traveled`)
-      const rSrc = map.getSource(`${route.id}-remaining`)
-      if (tSrc) tSrc.setData(makeGJ(traveled))
-      if (rSrc) rSrc.setData(makeGJ(remaining.length > 1 ? remaining : []))
+      map.getSource(`${route.id}-traveled`)?.setData(makeGJ(traveled))
+      map.getSource(`${route.id}-remaining`)?.setData(makeGJ(remaining.length > 1 ? remaining : []))
 
       const dot = dotMarkers.current[route.id]
       if (dot) {
@@ -89,56 +86,63 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
         if (traveled.length) dot.setLngLat(traveled[traveled.length - 1])
       }
     })
-  }, [map, routes, animatingId])
+  }, [map, routes, animatingIds])
 
-  // Handle animation trigger
+  // Start/stop animators as animatingIds changes
   useEffect(() => {
-    if (!map || !animatingId) return
+    if (!map) return
+    const prev = prevAnimatingIds.current
+    const curr = animatingIds
 
-    const route = routes.find((r) => r.id === animatingId)
-    if (!route) return
-    if (!initializedRoutes.current.has(route.id)) return
+    // Start newly added IDs
+    curr.forEach((id) => {
+      if (prev.includes(id)) return // already running
+      if (animators.current[id]) animators.current[id].stop()
 
-    const coords = route.geometry
-    if (!coords) return
+      const route = routes.find((r) => r.id === id)
+      if (!route?.geometry) return
+      if (!initializedRoutes.current.has(id)) return
 
-    if (animators.current[animatingId]) {
-      animators.current[animatingId].stop()
-    }
+      const dot = dotMarkers.current[id]
+      if (dot) dot.getElement().style.display = 'block'
 
-    const dot = dotMarkers.current[animatingId]
-    if (dot) dot.getElement().style.display = 'block'
-
-    const durationMs = ((speeds?.[route.mode] ?? 4)) * 1000
-
-    const animator = new RouteAnimator({
-      map,
-      routeId: animatingId,
-      coords,
-      durationMs,
-      startProgress: route.progress ?? 0,
-      dotMarker: dot,
-      onProgress: (t) => updateRoute(animatingId, { progress: t }),
-      onComplete: () => {
-        updateRoute(animatingId, { progress: 1 })
-        if (onAnimateComplete) onAnimateComplete(animatingId)
-      },
+      const durationMs = (speeds?.[route.mode] ?? 4) * 1000
+      const animator = new RouteAnimator({
+        map,
+        routeId: id,
+        coords: route.geometry,
+        durationMs,
+        startProgress: route.progress ?? 0,
+        dotMarker: dot,
+        onProgress: (t) => updateRoute(id, { progress: t }),
+        onComplete: () => {
+          updateRoute(id, { progress: 1 })
+          onAnimateComplete?.(id)
+        },
+      })
+      animators.current[id] = animator
+      animator.start()
     })
-    animators.current[animatingId] = animator
-    animator.start()
 
-    return () => {
-      animator.stop()
-    }
-  }, [map, animatingId])
+    // Stop removed IDs
+    prev.forEach((id) => {
+      if (!curr.includes(id) && animators.current[id]) {
+        animators.current[id].stop()
+        delete animators.current[id]
+      }
+    })
+
+    prevAnimatingIds.current = curr
+  }, [map, animatingIds, routes, speeds])
 
   // Cleanup removed routes
   useEffect(() => {
+    if (!map) return
     const routeIds = new Set(routes.map((r) => r.id))
     initializedRoutes.current.forEach((id) => {
       if (!routeIds.has(id)) {
-        if (animators.current[id]) animators.current[id].stop()
-        if (dotMarkers.current[id]) dotMarkers.current[id].remove()
+        animators.current[id]?.stop()
+        dotMarkers.current[id]?.remove()
         if (map.getLayer(`${id}-traveled`)) map.removeLayer(`${id}-traveled`)
         if (map.getLayer(`${id}-remaining`)) map.removeLayer(`${id}-remaining`)
         if (map.getSource(`${id}-traveled`)) map.removeSource(`${id}-traveled`)
@@ -150,11 +154,9 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
     })
   }, [map, routes])
 
-  useEffect(() => {
-    return () => {
-      Object.values(animators.current).forEach((a) => a.stop())
-      Object.values(dotMarkers.current).forEach((m) => m.remove())
-    }
+  useEffect(() => () => {
+    Object.values(animators.current).forEach((a) => a.stop())
+    Object.values(dotMarkers.current).forEach((m) => m.remove())
   }, [])
 
   return null
