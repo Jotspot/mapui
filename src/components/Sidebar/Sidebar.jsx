@@ -7,7 +7,7 @@ import SettingsPanel from './SettingsPanel.jsx'
 
 const TABS = ['Teams', 'Waypoints', 'Routes', '⚙']
 
-export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRoute, onPlaySingle }) {
+export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRoute, onEditRoute, onPlaySingle }) {
   const [tab, setTab] = useState('Teams')
 
   return (
@@ -29,7 +29,7 @@ export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRou
       <div className="sidebar-content">
         {tab === 'Teams' && <TeamsPanel onAdd={onAddTeam} onEdit={onEditTeam} />}
         {tab === 'Waypoints' && <WaypointsPanel onAdd={onAddWaypoint} />}
-        {tab === 'Routes' && <RoutesPanel onAdd={onAddRoute} onPlaySingle={onPlaySingle} />}
+        {tab === 'Routes' && <RoutesPanel onAdd={onAddRoute} onEdit={onEditRoute} onPlaySingle={onPlaySingle} />}
         {tab === '⚙' && <SettingsPanel />}
       </div>
     </div>

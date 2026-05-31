@@ -15,20 +15,18 @@ const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, color: '#4
 export default function AddTeamModal({ initial, onClose }) {
   const addTeam = useAppStore((s) => s.addTeam)
   const updateTeam = useAppStore((s) => s.updateTeam)
-  const waypoints = useAppStore((s) => s.waypoints)
 
   const [name, setName] = useState(initial?.name || '')
   const [color, setColor] = useState(initial?.color || '#EF4444')
   const [photo, setPhoto] = useState(initial?.photoDataUrl || null)
-  const [waypointId, setWaypointId] = useState(initial?.waypointId || '')
 
   const submit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
     if (initial?.id) {
-      updateTeam(initial.id, { name: name.trim(), color, photoDataUrl: photo, waypointId: waypointId || null })
+      updateTeam(initial.id, { name: name.trim(), color, photoDataUrl: photo })
     } else {
-      addTeam({ name: name.trim(), color, photoDataUrl: photo, waypointId: waypointId || null })
+      addTeam({ name: name.trim(), color, photoDataUrl: photo })
     }
     onClose()
   }
@@ -53,15 +51,6 @@ export default function AddTeamModal({ initial, onClose }) {
         <div>
           <label style={labelStyle}>Photo (optional)</label>
           <PhotoUpload value={photo} onChange={setPhoto} />
-        </div>
-        <div>
-          <label style={labelStyle}>Starting Location</label>
-          <select style={fieldStyle} value={waypointId} onChange={(e) => setWaypointId(e.target.value)}>
-            <option value="">— None —</option>
-            {waypoints.map((w) => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
-          </select>
         </div>
         <button
           type="submit"

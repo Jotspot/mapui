@@ -69,7 +69,8 @@ export default function App() {
         onAddTeam={() => setModal({ type: 'team', data: null })}
         onEditTeam={(team) => setModal({ type: 'team', data: team })}
         onAddWaypoint={() => { setWaypointPrefill(null); setModal({ type: 'waypoint' }) }}
-        onAddRoute={() => setModal({ type: 'route' })}
+        onAddRoute={() => setModal({ type: 'route', data: null })}
+        onEditRoute={(route) => setModal({ type: 'route', data: route })}
         onPlaySingle={handlePlaySingle}
       />
       <PlaybackBar
@@ -99,7 +100,7 @@ export default function App() {
           onStartPlacing={() => { setModal(null); setPlacingWaypoint(true) }}
         />
       )}
-      {modal?.type === 'route' && <AddRouteModal onClose={() => setModal(null)} />}
+      {modal?.type === 'route' && <AddRouteModal initial={modal.data} onClose={() => setModal(null)} />}
     </>
   )
 }

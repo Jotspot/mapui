@@ -2,9 +2,10 @@ import useAppStore from '../../store/useAppStore.js'
 
 const MODE_LABELS = { flight: '✈️', driving: '🚗', transit: '🚆', walking: '🚶' }
 
-export default function RoutesPanel({ onAdd, onPlaySingle }) {
+export default function RoutesPanel({ onAdd, onEdit, onPlaySingle }) {
   const routes = useAppStore((s) => s.routes)
   const waypoints = useAppStore((s) => s.waypoints)
+  const teams = useAppStore((s) => s.teams)
   const removeRoute = useAppStore((s) => s.removeRoute)
   const updateRoute = useAppStore((s) => s.updateRoute)
 
@@ -20,13 +21,16 @@ export default function RoutesPanel({ onAdd, onPlaySingle }) {
       )}
       {routes.map((route) => {
         const progress = route.progress ?? 1
+        const team = teams.find((t) => t.id === route.teamId)
+        const color = team?.color || route.color || '#3b82f6'
         return (
           <div key={route.id} className="panel-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
             {/* Top row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div className="color-dot" style={{ background: route.color }} />
+              <div className="color-dot" style={{ background: color }} />
               <span style={{ fontSize: 15 }}>{MODE_LABELS[route.mode] || '🗺️'}</span>
-              <span className="panel-item-name">
+              <span className="panel-item-name" style={{ flex: 1 }}>
+                {team ? <strong>{team.name}:</strong> : null}{' '}
                 {wpName(route.fromWaypointId)} → {wpName(route.toWaypointId)}
               </span>
             </div>
@@ -35,12 +39,10 @@ export default function RoutesPanel({ onAdd, onPlaySingle }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 10, color: '#94a3b8', width: 18, flexShrink: 0 }}>0</span>
               <input
-                type="range"
-                min="0"
-                max="100"
+                type="range" min="0" max="100"
                 value={Math.round(progress * 100)}
                 onChange={(e) => updateRoute(route.id, { progress: Number(e.target.value) / 100 })}
-                style={{ flex: 1, accentColor: route.color, cursor: 'pointer' }}
+                style={{ flex: 1, accentColor: color, cursor: 'pointer' }}
               />
               <span style={{ fontSize: 10, color: '#94a3b8', width: 28, flexShrink: 0, textAlign: 'right' }}>
                 {Math.round(progress * 100)}%
@@ -49,11 +51,7 @@ export default function RoutesPanel({ onAdd, onPlaySingle }) {
 
             {/* Actions row */}
             <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                className="panel-item-action animate"
-                style={{ flex: 1 }}
-                onClick={() => onPlaySingle(route.id)}
-              >
+              <button className="panel-item-action animate" style={{ flex: 1 }} onClick={() => onPlaySingle(route.id)}>
                 ▶ Play
               </button>
               <button
@@ -67,6 +65,14 @@ export default function RoutesPanel({ onAdd, onPlaySingle }) {
                 onClick={() => updateRoute(route.id, { queued: !route.queued })}
               >
                 {route.queued ? '★ Queued' : '☆ Queue'}
+              </button>
+              <button
+                className="panel-item-action"
+                style={{ background: '#f8fafc', color: '#64748b' }}
+                onClick={() => onEdit(route)}
+                title="Edit route"
+              >
+                ✎
               </button>
               <button
                 className="panel-item-action"
