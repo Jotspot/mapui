@@ -97,7 +97,15 @@ export function updateTeamMarkerEl(el, team) {
   const fresh = createTeamMarkerEl(team)
   while (el.firstChild) el.removeChild(el.firstChild)
   while (fresh.firstChild) el.appendChild(fresh.firstChild)
-  el.style.cssText = fresh.style.cssText
+  // Do NOT touch el.style — MapLibre's positioning transform lives there.
+  // The base styles (position, width, height, overflow) never change between teams.
+}
+
+export function updateWaypointMarkerEl(el, waypoint) {
+  const fresh = createWaypointMarkerEl(waypoint)
+  while (el.firstChild) el.removeChild(el.firstChild)
+  while (fresh.firstChild) el.appendChild(fresh.firstChild)
+  // Same: don't overwrite el.style.cssText or MapLibre's transform is lost.
 }
 
 // Waypoints use the original working implementation unchanged.
@@ -144,9 +152,3 @@ export function createWaypointMarkerEl(waypoint) {
   return el
 }
 
-export function updateWaypointMarkerEl(el, waypoint) {
-  const fresh = createWaypointMarkerEl(waypoint)
-  while (el.firstChild) el.removeChild(el.firstChild)
-  while (fresh.firstChild) el.appendChild(fresh.firstChild)
-  el.style.cssText = fresh.style.cssText
-}
