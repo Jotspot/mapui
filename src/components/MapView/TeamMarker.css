@@ -1,0 +1,63 @@
+.team-marker-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+}
+
+.team-pin {
+  width: 56px;
+  height: 56px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 3.5px solid var(--team-color);
+  background: white;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.team-pin img,
+.team-pin .initials {
+  width: 100%;
+  height: 100%;
+  transform: rotate(45deg);
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-pin .initials {
+  background: var(--team-color);
+  color: white;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.team-pin-point {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 10px solid var(--team-color);
+  margin-top: -2px;
+}
+
+.team-label {
+  margin-top: 5px;
+  background: var(--team-color);
+  color: white;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  text-transform: uppercase;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
