@@ -42,11 +42,8 @@ export default function AddRouteModal({ initial, onClose }) {
       })
     } else {
       addRoute({ fromWaypointId: from, toWaypointId: to, mode, color, teamId: teamId || null, progress: 0, queued: false, geometry: null })
-      // Auto-place team at the from waypoint if they have no position
-      if (teamId) {
-        const t = teams.find((t) => t.id === teamId)
-        if (t && !t.waypointId) updateTeam(teamId, { waypointId: from })
-      }
+      // Place team at the from waypoint so their pin appears on the map
+      if (teamId) updateTeam(teamId, { waypointId: from })
     }
     onClose()
   }
