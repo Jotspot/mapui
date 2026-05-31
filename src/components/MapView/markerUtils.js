@@ -86,21 +86,17 @@ export function updateTeamMarkerEl(el, team) {
 
 export function createWaypointMarkerEl(waypoint) {
   const el = document.createElement('div')
-  el.style.cssText = 'position:relative;width:22px;cursor:pointer;overflow:visible;'
-
-  const pin = document.createElement('div')
-  pin.style.cssText = 'display:flex;flex-direction:column;align-items:center;'
+  el.style.cssText = 'position:relative;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;'
 
   const head = document.createElement('div')
   head.style.cssText = [
     'width:22px', 'height:22px', 'border-radius:50%',
     'background:#2563eb', 'border:3px solid white',
-    'box-shadow:0 0 0 1.5px #2563eb', 'flex-shrink:0',
-    'display:flex', 'align-items:center', 'justify-content:center',
+    'box-shadow:0 0 0 1.5px #2563eb', 'position:relative', 'flex-shrink:0',
   ].join(';')
 
   const dot = document.createElement('div')
-  dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:white;'
+  dot.style.cssText = 'position:absolute;inset:3px;border-radius:50%;background:white;'
   head.appendChild(dot)
 
   const stem = document.createElement('div')
@@ -111,11 +107,6 @@ export function createWaypointMarkerEl(waypoint) {
     'margin-top:-1px', 'flex-shrink:0',
   ].join(';')
 
-  pin.appendChild(head)
-  pin.appendChild(stem)
-  el.appendChild(pin)
-
-  // Label to the right, absolutely positioned
   const label = document.createElement('div')
   label.textContent = waypoint.name
   label.style.cssText = [
@@ -130,6 +121,8 @@ export function createWaypointMarkerEl(waypoint) {
     "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
   ].join(';')
 
+  el.appendChild(head)
+  el.appendChild(stem)
   el.appendChild(label)
   return el
 }
