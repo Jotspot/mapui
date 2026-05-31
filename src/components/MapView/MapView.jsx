@@ -115,7 +115,8 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
       } else {
         const el = createTeamMarkerEl(team)
         const lnglat = wp ? [wp.lng, wp.lat] : [0, 0]
-        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        // anchor:'top-left' + zero-size el means spike tip = coordinate exactly
+        const marker = new maplibregl.Marker({ element: el, anchor: 'top-left' })
           .setLngLat(lnglat)
           .addTo(map)
         if (!wp) marker.getElement().style.display = 'none'

@@ -1,25 +1,41 @@
-// Pure DOM marker creation — no innerHTML, no SVG, no CSS filter.
-// anchor:'bottom' means MapLibre places the bottom of the element at the coordinate.
-// The pin body (circle + spike) is in-flow; the label is position:absolute so it
-// doesn't affect offsetHeight, keeping the spike tip precisely at the coordinate.
+// Marker elements for MapLibre custom markers.
+//
+// Team marker uses anchor:'top-left' with a zero-size anchor point at (0,0).
+// All visuals hang above-and-right via position:absolute, so MapLibre never
+// needs to measure element size to compute the anchor offset.
+// The spike tip is placed exactly at the coordinate via a negative offset.
 
 function initials(name) {
   return name.split(/[\s/]+/).map((w) => w[0] || '').join('').slice(0, 2).toUpperCase()
 }
 
-export function createTeamMarkerEl(team) {
-  const el = document.createElement('div')
-  // Fixed width so MapLibre can measure correctly; overflow:visible for label
-  el.style.cssText = 'position:relative;width:56px;cursor:pointer;overflow:visible;'
+// Ring diameter + spike geometry constants — must match CSS below.
+const RING = 56   // px, circle diameter
+const SPIKE_H = 14 // px, visible spike height (16px height - 2px overlap)
+const PIN_H = RING + SPIKE_H  // 70px total pin height
 
-  // Pin body: circle + spike stacked, this div defines the offsetHeight MapLibre uses
+export function createTeamMarkerEl(team) {
+  // Zero-size anchor div. anchor:'top-left' + offset places this corner exactly
+  // at the spike tip. All visuals are absolutely positioned relative to this div.
+  const el = document.createElement('div')
+  el.style.cssText = 'position:relative;width:0;height:0;cursor:pointer;overflow:visible;'
+
+  // Pin wrapper — absolutely positioned so spike tip aligns with el's origin
   const pin = document.createElement('div')
-  pin.style.cssText = 'display:flex;flex-direction:column;align-items:center;'
+  // Left-center the pin on the spike tip: left = -RING/2, top = -PIN_H
+  pin.style.cssText = [
+    'position:absolute',
+    `left:${-RING / 2}px`,  // center ring over spike tip
+    `top:${-PIN_H}px`,      // push pin up so spike tip is at origin
+    `width:${RING}px`,
+    'display:flex', 'flex-direction:column', 'align-items:center',
+    'pointer-events:auto',
+  ].join(';')
 
   // Coloured ring
   const ring = document.createElement('div')
   ring.style.cssText = [
-    'width:56px', 'height:56px', 'border-radius:50%',
+    `width:${RING}px`, `height:${RING}px`, 'border-radius:50%',
     `background:${team.color}`,
     'display:flex', 'align-items:center', 'justify-content:center',
     'box-shadow:0 4px 18px rgba(0,0,0,0.45)',
@@ -29,7 +45,7 @@ export function createTeamMarkerEl(team) {
   if (team.photoDataUrl) {
     const img = document.createElement('img')
     img.src = team.photoDataUrl
-    img.style.cssText = 'width:50px;height:50px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;'
+    img.style.cssText = `width:${RING - 6}px;height:${RING - 6}px;border-radius:50%;object-fit:cover;display:block;flex-shrink:0;`
     img.draggable = false
     ring.appendChild(img)
   } else {
@@ -43,7 +59,7 @@ export function createTeamMarkerEl(team) {
     ring.appendChild(ini)
   }
 
-  // Downward triangle spike
+  // Spike
   const spike = document.createElement('div')
   spike.style.cssText = [
     `background:${team.color}`,
@@ -56,13 +72,13 @@ export function createTeamMarkerEl(team) {
   pin.appendChild(spike)
   el.appendChild(pin)
 
-  // Label — absolutely positioned, does NOT add to offsetHeight
+  // Label — to the right of the ring, vertically centered on it
   const label = document.createElement('div')
   label.textContent = team.name
   label.style.cssText = [
     'position:absolute',
-    'top:8px',            // vertically centered on the ring
-    'left:calc(100% + 6px)',
+    `top:${-PIN_H + 10}px`,          // align with top of ring + small padding
+    `left:${RING / 2 + 6}px`,        // right of ring center
     `background:${team.color}`,
     'color:white', 'font-weight:900', 'font-size:11px',
     'letter-spacing:1px', 'text-transform:uppercase',
@@ -84,6 +100,7 @@ export function updateTeamMarkerEl(el, team) {
   el.style.cssText = fresh.style.cssText
 }
 
+// Waypoints use the original working implementation unchanged.
 export function createWaypointMarkerEl(waypoint) {
   const el = document.createElement('div')
   el.style.cssText = 'position:relative;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;'
