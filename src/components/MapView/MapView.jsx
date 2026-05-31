@@ -103,16 +103,22 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
 
     teams.forEach((team) => {
       const wp = waypointMap[team.waypointId]
-      if (!wp) return
       if (teamMarkersRef.current[team.id]) {
         const { marker, el } = teamMarkersRef.current[team.id]
-        marker.setLngLat([wp.lng, wp.lat])
         updateTeamMarkerEl(el, team)
+        if (wp) {
+          marker.setLngLat([wp.lng, wp.lat])
+          marker.getElement().style.display = ''
+        } else {
+          marker.getElement().style.display = 'none'
+        }
       } else {
         const el = createTeamMarkerEl(team)
+        const lnglat = wp ? [wp.lng, wp.lat] : [0, 0]
         const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-          .setLngLat([wp.lng, wp.lat])
+          .setLngLat(lnglat)
           .addTo(map)
+        if (!wp) marker.getElement().style.display = 'none'
         teamMarkersRef.current[team.id] = { marker, el }
       }
     })
@@ -152,6 +158,8 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
           map={mapRef.current}
           routes={routes}
           waypoints={waypoints}
+          teams={teams}
+          teamMarkersRef={teamMarkersRef}
           animatingIds={animatingIds}
           onAnimateComplete={onAnimateComplete}
           speeds={speeds}

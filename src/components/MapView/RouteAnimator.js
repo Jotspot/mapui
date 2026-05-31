@@ -1,13 +1,14 @@
 import { sliceCoords, easeInOut } from '../../utils/geo.js'
 
 export class RouteAnimator {
-  constructor({ map, routeId, coords, durationMs = 4000, startProgress = 0, dotMarker, onProgress, onComplete }) {
+  constructor({ map, routeId, coords, durationMs = 4000, startProgress = 0, dotMarker, keepMarkerVisible = false, onProgress, onComplete }) {
     this.map = map
     this.routeId = routeId
     this.coords = coords
     this.durationMs = durationMs * (1 - startProgress) // scale duration by remaining distance
     this.startProgress = startProgress
     this.dotMarker = dotMarker
+    this.keepMarkerVisible = keepMarkerVisible
     this.onProgress = onProgress
     this.onComplete = onComplete
     this._raf = null
@@ -65,7 +66,7 @@ export class RouteAnimator {
       if (remainingSrc) {
         remainingSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } })
       }
-      if (this.dotMarker) this.dotMarker.getElement().style.display = 'none'
+      if (this.dotMarker && !this.keepMarkerVisible) this.dotMarker.getElement().style.display = 'none'
       if (this.onComplete) this.onComplete()
     }
   }

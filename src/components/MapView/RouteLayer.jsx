@@ -4,16 +4,18 @@ import { getRouteLayerSpecs } from '../../utils/routeStyles.js'
 import { greatCircleArc, fetchRoadGeometry, sliceCoords } from '../../utils/geo.js'
 import { RouteAnimator } from './RouteAnimator.js'
 import useAppStore from '../../store/useAppStore.js'
+import { createTeamMarkerEl } from './markerUtils.js'
 
 function makeGJ(coords) {
   return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
 }
 
-export default function RouteLayer({ map, routes, waypoints, animatingIds = [], onAnimateComplete, speeds }) {
+export default function RouteLayer({ map, routes, waypoints, teams = [], teamMarkersRef, animatingIds = [], onAnimateComplete, speeds }) {
   const updateRoute = useAppStore((s) => s.updateRoute)
+  const updateTeam = useAppStore((s) => s.updateTeam)
   const initializedRoutes = useRef(new Set())
   const animators = useRef({})   // routeId → RouteAnimator
-  const dotMarkers = useRef({})  // routeId → maplibregl.Marker
+  const dotMarkers = useRef({})  // routeId → maplibregl.Marker (fallback dot, used when no team)
   const prevAnimatingIds = useRef([])
 
   // Initialize new routes (sources + layers)
@@ -103,8 +105,21 @@ export default function RouteLayer({ map, routes, waypoints, animatingIds = [], 
       if (!route?.geometry) return
       if (!initializedRoutes.current.has(id)) return
 
-      const dot = dotMarkers.current[id]
-      if (dot) dot.getElement().style.display = 'block'
+      // Prefer the team marker as the moving dot
+      const team = teams.find((t) => t.waypointId === route.fromWaypointId)
+      const teamMarkerEntry = team && teamMarkersRef?.current?.[team.id]
+      let movingMarker
+
+      if (teamMarkerEntry) {
+        teamMarkerEntry.marker.getElement().style.display = ''
+        movingMarker = teamMarkerEntry.marker
+        // Hide the fallback dot while team marker is being used
+        dotMarkers.current[id]?.getElement && (dotMarkers.current[id].getElement().style.display = 'none')
+      } else {
+        const dot = dotMarkers.current[id]
+        if (dot) dot.getElement().style.display = 'block'
+        movingMarker = dot
+      }
 
       const durationMs = (speeds?.[route.mode] ?? 4) * 1000
       const animator = new RouteAnimator({
@@ -113,10 +128,17 @@ export default function RouteLayer({ map, routes, waypoints, animatingIds = [], 
         coords: route.geometry,
         durationMs,
         startProgress: route.progress ?? 0,
-        dotMarker: dot,
+        dotMarker: movingMarker,
+        keepMarkerVisible: !!teamMarkerEntry,
         onProgress: (t) => updateRoute(id, { progress: t }),
         onComplete: () => {
           updateRoute(id, { progress: 1 })
+          // Move team to destination waypoint
+          if (team) updateTeam(team.id, { waypointId: route.toWaypointId })
+          // Hide dot (team marker will reposition via MapView effect)
+          if (!teamMarkerEntry && dotMarkers.current[id]) {
+            dotMarkers.current[id].getElement().style.display = 'none'
+          }
           onAnimateComplete?.(id)
         },
       })
