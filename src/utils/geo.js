@@ -1,17 +1,27 @@
 const toRad = (d) => (d * Math.PI) / 180
 const toDeg = (r) => (r * 180) / Math.PI
 
+// Correct spherical linear interpolation (SLERP) great-circle arc
 export function greatCircleArc(from, to, numPoints = 100) {
   const [lng1, lat1] = from
   const [lng2, lat2] = to
   const φ1 = toRad(lat1), λ1 = toRad(lng1)
   const φ2 = toRad(lat2), λ2 = toRad(lng2)
 
+  // Angular distance between the two points
+  const cosD = Math.sin(φ1) * Math.sin(φ2) + Math.cos(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1)
+  const d = Math.acos(Math.max(-1, Math.min(1, cosD)))
+
+  // If points are the same (or very close), just return a straight line
+  if (d < 1e-10) {
+    return [[lng1, lat1], [lng2, lat2]]
+  }
+
   const coords = []
   for (let i = 0; i <= numPoints; i++) {
     const t = i / numPoints
-    const A = Math.sin((1 - t) * Math.PI) / Math.sin(Math.PI)
-    const B = Math.sin(t * Math.PI) / Math.sin(Math.PI)
+    const A = Math.sin((1 - t) * d) / Math.sin(d)
+    const B = Math.sin(t * d) / Math.sin(d)
 
     const x = A * Math.cos(φ1) * Math.cos(λ1) + B * Math.cos(φ2) * Math.cos(λ2)
     const y = A * Math.cos(φ1) * Math.sin(λ1) + B * Math.cos(φ2) * Math.sin(λ2)
@@ -54,9 +64,7 @@ export async function fetchRoadGeometry(from, to, mode) {
     const res = await fetch(url)
     if (!res.ok) throw new Error('OSRM error')
     const data = await res.json()
-    if (data.routes && data.routes[0]) {
-      return data.routes[0].geometry.coordinates
-    }
+    if (data.routes?.[0]) return data.routes[0].geometry.coordinates
     throw new Error('No route found')
   } catch {
     return null

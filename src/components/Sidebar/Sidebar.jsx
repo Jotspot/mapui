@@ -3,8 +3,9 @@ import './Sidebar.css'
 import TeamsPanel from './TeamsPanel.jsx'
 import WaypointsPanel from './WaypointsPanel.jsx'
 import RoutesPanel from './RoutesPanel.jsx'
+import SettingsPanel from './SettingsPanel.jsx'
 
-const TABS = ['Teams', 'Waypoints', 'Routes']
+const TABS = ['Teams', 'Waypoints', 'Routes', '⚙']
 
 export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRoute, onPlaySingle }) {
   const [tab, setTab] = useState('Teams')
@@ -12,9 +13,7 @@ export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRou
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <div className="sidebar-title">
-          🗺️ Jetlag Map
-        </div>
+        <div className="sidebar-title">🗺️ Jetlag Map</div>
         <div className="sidebar-tabs">
           {TABS.map((t) => (
             <button
@@ -31,6 +30,7 @@ export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRou
         {tab === 'Teams' && <TeamsPanel onAdd={onAddTeam} onEdit={onEditTeam} />}
         {tab === 'Waypoints' && <WaypointsPanel onAdd={onAddWaypoint} />}
         {tab === 'Routes' && <RoutesPanel onAdd={onAddRoute} onPlaySingle={onPlaySingle} />}
+        {tab === '⚙' && <SettingsPanel />}
       </div>
     </div>
   )

@@ -9,7 +9,7 @@ function makeGJ(coords) {
   return { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
 }
 
-export default function RouteLayer({ map, routes, waypoints, animatingId, onAnimateComplete }) {
+export default function RouteLayer({ map, routes, waypoints, animatingId, onAnimateComplete, speeds }) {
   const updateRoute = useAppStore((s) => s.updateRoute)
   const initializedRoutes = useRef(new Set())
   const animators = useRef({})
@@ -109,11 +109,13 @@ export default function RouteLayer({ map, routes, waypoints, animatingId, onAnim
     const dot = dotMarkers.current[animatingId]
     if (dot) dot.getElement().style.display = 'block'
 
+    const durationMs = ((speeds?.[route.mode] ?? 4)) * 1000
+
     const animator = new RouteAnimator({
       map,
       routeId: animatingId,
       coords,
-      durationMs: 4000,
+      durationMs,
       startProgress: route.progress ?? 0,
       dotMarker: dot,
       onProgress: (t) => updateRoute(animatingId, { progress: t }),

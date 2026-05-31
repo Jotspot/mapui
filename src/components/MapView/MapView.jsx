@@ -7,7 +7,7 @@ import WaypointMarker from './WaypointMarker.jsx'
 import RouteLayer from './RouteLayer.jsx'
 import useAppStore from '../../store/useAppStore.js'
 
-export default function MapView({ placingWaypoint, onMapClick, animatingId, onAnimateComplete }) {
+export default function MapView({ placingWaypoint, onMapClick, animatingId, onAnimateComplete, speeds }) {
   const teams = useAppStore((s) => s.teams)
   const waypoints = useAppStore((s) => s.waypoints)
   const routes = useAppStore((s) => s.routes)
@@ -134,6 +134,7 @@ export default function MapView({ placingWaypoint, onMapClick, animatingId, onAn
           waypoints={waypoints}
           animatingId={animatingId}
           onAnimateComplete={onAnimateComplete}
+          speeds={speeds}
         />
       )}
     </div>

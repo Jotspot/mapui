@@ -1,16 +1,12 @@
+/* Anchor: bottom of .wp-marker = tip of spike = exact map coordinate */
 .wp-marker {
-  display: flex;
-  align-items: flex-start;
-  cursor: pointer;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
-  user-select: none;
-}
-
-.wp-pin {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+  user-select: none;
 }
 
 .wp-head {
@@ -40,9 +36,11 @@
   margin-top: -1px;
 }
 
+/* Floats to the right of head — does NOT affect element height */
 .wp-label {
-  margin-left: 6px;
-  margin-top: 1px;
+  position: absolute;
+  top: 1px;
+  left: calc(100% + 6px);
   background: #2563eb;
   color: white;
   font-weight: 700;
@@ -52,4 +50,5 @@
   border-radius: 4px;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
 }
