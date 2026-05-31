@@ -6,7 +6,7 @@ import RoutesPanel from './RoutesPanel.jsx'
 
 const TABS = ['Teams', 'Waypoints', 'Routes']
 
-export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRoute }) {
+export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRoute, onPlaySingle }) {
   const [tab, setTab] = useState('Teams')
 
   return (
@@ -30,7 +30,7 @@ export default function Sidebar({ onAddTeam, onEditTeam, onAddWaypoint, onAddRou
       <div className="sidebar-content">
         {tab === 'Teams' && <TeamsPanel onAdd={onAddTeam} onEdit={onEditTeam} />}
         {tab === 'Waypoints' && <WaypointsPanel onAdd={onAddWaypoint} />}
-        {tab === 'Routes' && <RoutesPanel onAdd={onAddRoute} />}
+        {tab === 'Routes' && <RoutesPanel onAdd={onAddRoute} onPlaySingle={onPlaySingle} />}
       </div>
     </div>
   )

@@ -1,0 +1,135 @@
+.playback-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 300px; /* sidebar width */
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.playback-progress-track {
+  height: 4px;
+  background: rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.playback-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  transition: width 0.1s linear;
+}
+
+.playback-controls {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: all;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.playback-play-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.5);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.playback-play-btn:hover {
+  background: #2563eb;
+  transform: scale(1.05);
+}
+
+.playback-play-btn.playing {
+  background: #f59e0b;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.5);
+}
+
+.playback-queue {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.playback-queue::-webkit-scrollbar { display: none; }
+
+.playback-queue-empty {
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+  font-style: italic;
+}
+
+.queue-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.7);
+  border: 1.5px solid rgba(255,255,255,0.12);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.queue-chip.active {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
+  color: white;
+}
+
+.queue-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.playback-step-info {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.playback-current-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.playback-route-bar-track {
+  width: 80px;
+  height: 4px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.playback-route-bar-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}

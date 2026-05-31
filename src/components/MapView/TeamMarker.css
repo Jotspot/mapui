@@ -1,63 +1,62 @@
-.team-marker-wrap {
+.jetlag-pin {
   display: flex;
   flex-direction: column;
   align-items: center;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.55));
   cursor: pointer;
-  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.4));
+  user-select: none;
 }
 
-.team-pin {
-  width: 56px;
-  height: 56px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  border: 3.5px solid var(--team-color);
-  background: white;
+.jetlag-bubble {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  border: 4px solid var(--team-color);
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #e2e8f0;
+  flex-shrink: 0;
   position: relative;
 }
 
-.team-pin img,
-.team-pin .initials {
+.jetlag-bubble img {
   width: 100%;
   height: 100%;
-  transform: rotate(45deg);
   object-fit: cover;
+  display: block;
+}
+
+.jetlag-initials {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.team-pin .initials {
   background: var(--team-color);
   color: white;
-  font-weight: 800;
-  font-size: 13px;
+  font-weight: 900;
+  font-size: 18px;
   letter-spacing: 0.5px;
 }
 
-.team-pin-point {
+.jetlag-spike {
   width: 0;
   height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 10px solid var(--team-color);
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 18px solid var(--team-color);
   margin-top: -2px;
 }
 
-.team-label {
-  margin-top: 5px;
+.jetlag-label {
+  margin-top: 6px;
   background: var(--team-color);
   color: white;
-  font-weight: 800;
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  padding: 3px 8px;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 10px;
   border-radius: 4px;
   white-space: nowrap;
-  text-transform: uppercase;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }

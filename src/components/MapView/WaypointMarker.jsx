@@ -2,12 +2,12 @@ import './WaypointMarker.css'
 
 export default function WaypointMarker({ waypoint }) {
   return (
-    <div className="waypoint-marker-wrap">
-      <div className="waypoint-pin">
-        <div className="waypoint-circle" />
-        <div className="waypoint-stem" />
+    <div className="wp-marker">
+      <div className="wp-pin">
+        <div className="wp-head" />
+        <div className="wp-spike" />
       </div>
-      <div className="waypoint-label">{waypoint.name}</div>
+      <div className="wp-label">{waypoint.name}</div>
     </div>
   )
 }

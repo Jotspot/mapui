@@ -1,11 +1,12 @@
 import { sliceCoords, easeInOut } from '../../utils/geo.js'
 
 export class RouteAnimator {
-  constructor({ map, routeId, coords, durationMs = 4000, dotMarker, onProgress, onComplete }) {
+  constructor({ map, routeId, coords, durationMs = 4000, startProgress = 0, dotMarker, onProgress, onComplete }) {
     this.map = map
     this.routeId = routeId
     this.coords = coords
-    this.durationMs = durationMs
+    this.durationMs = durationMs * (1 - startProgress) // scale duration by remaining distance
+    this.startProgress = startProgress
     this.dotMarker = dotMarker
     this.onProgress = onProgress
     this.onComplete = onComplete
@@ -24,13 +25,10 @@ export class RouteAnimator {
     this._raf = null
   }
 
-  _tick(now) {
-    if (!this._startTime) this._startTime = now
-    const raw = Math.min((now - this._startTime) / this.durationMs, 1)
-    const t = easeInOut(raw)
-
+  _updateSources(t) {
     const traveled = sliceCoords(this.coords, t)
-    const remaining = sliceCoords(this.coords, 1).slice(Math.max(0, traveled.length - 1))
+    const tipIdx = Math.floor(t * (this.coords.length - 1))
+    const remaining = [traveled[traveled.length - 1], ...this.coords.slice(tipIdx + 1)]
 
     const traveledSrc = this.map.getSource(`${this.routeId}-traveled`)
     const remainingSrc = this.map.getSource(`${this.routeId}-remaining`)
@@ -39,19 +37,31 @@ export class RouteAnimator {
       traveledSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: traveled } })
     }
     if (remainingSrc) {
-      remainingSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: remaining } })
+      remainingSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: remaining.length > 1 ? remaining : [] } })
     }
 
     if (this.dotMarker && traveled.length >= 1) {
-      const tip = traveled[traveled.length - 1]
-      this.dotMarker.setLngLat(tip)
+      this.dotMarker.setLngLat(traveled[traveled.length - 1])
     }
+  }
 
+  _tick(now) {
+    if (!this._startTime) this._startTime = now
+    const elapsed = Math.min((now - this._startTime) / Math.max(this.durationMs, 1), 1)
+    const t = this.startProgress + easeInOut(elapsed) * (1 - this.startProgress)
+
+    this._updateSources(t)
     if (this.onProgress) this.onProgress(t)
 
-    if (raw < 1) {
+    if (elapsed < 1) {
       this._raf = requestAnimationFrame(this._tick)
     } else {
+      // finalize: full traveled, empty remaining
+      const traveledSrc = this.map.getSource(`${this.routeId}-traveled`)
+      const remainingSrc = this.map.getSource(`${this.routeId}-remaining`)
+      if (traveledSrc) {
+        traveledSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: this.coords } })
+      }
       if (remainingSrc) {
         remainingSrc.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: [] } })
       }

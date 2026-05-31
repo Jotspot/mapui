@@ -7,7 +7,7 @@ import WaypointMarker from './WaypointMarker.jsx'
 import RouteLayer from './RouteLayer.jsx'
 import useAppStore from '../../store/useAppStore.js'
 
-export default function MapView({ placingWaypoint, onMapClick }) {
+export default function MapView({ placingWaypoint, onMapClick, animatingId, onAnimateComplete }) {
   const teams = useAppStore((s) => s.teams)
   const waypoints = useAppStore((s) => s.waypoints)
   const routes = useAppStore((s) => s.routes)
@@ -128,7 +128,13 @@ export default function MapView({ placingWaypoint, onMapClick }) {
   return (
     <div ref={containerRef} className={`map-container${placingWaypoint ? ' placing' : ''}`}>
       {mapReady && (
-        <RouteLayer map={mapRef.current} routes={routes} waypoints={waypoints} />
+        <RouteLayer
+          map={mapRef.current}
+          routes={routes}
+          waypoints={waypoints}
+          animatingId={animatingId}
+          onAnimateComplete={onAnimateComplete}
+        />
       )}
     </div>
   )

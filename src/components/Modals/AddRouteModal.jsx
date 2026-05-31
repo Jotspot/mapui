@@ -30,7 +30,8 @@ export default function AddRouteModal({ onClose }) {
       mode,
       color,
       teamId: teamId || null,
-      animationProgress: 0,
+      progress: 0,
+      queued: false,
       geometry: null,
     })
     onClose()

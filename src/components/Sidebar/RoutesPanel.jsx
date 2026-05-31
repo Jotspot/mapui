@@ -2,7 +2,7 @@ import useAppStore from '../../store/useAppStore.js'
 
 const MODE_LABELS = { flight: '✈️', driving: '🚗', transit: '🚆', walking: '🚶' }
 
-export default function RoutesPanel({ onAdd }) {
+export default function RoutesPanel({ onAdd, onPlaySingle }) {
   const routes = useAppStore((s) => s.routes)
   const waypoints = useAppStore((s) => s.waypoints)
   const removeRoute = useAppStore((s) => s.removeRoute)
@@ -15,25 +15,72 @@ export default function RoutesPanel({ onAdd }) {
       <button className="panel-add-btn" onClick={onAdd}>+ Add Route</button>
       {routes.length === 0 && (
         <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 20 }}>
-          No routes yet. Add waypoints first, then connect them with a route.
+          No routes yet. Add waypoints first, then connect them.
         </p>
       )}
-      {routes.map((route) => (
-        <div key={route.id} className="panel-item" style={{ flexWrap: 'wrap', gap: 6 }}>
-          <div className="color-dot" style={{ background: route.color }} />
-          <span style={{ fontSize: 16 }}>{MODE_LABELS[route.mode] || '🗺️'}</span>
-          <span className="panel-item-name">
-            {wpName(route.fromWaypointId)} → {wpName(route.toWaypointId)}
-          </span>
-          <button
-            className="panel-item-action animate"
-            onClick={() => updateRoute(route.id, { animationProgress: 0 })}
-          >
-            ▶ Play
-          </button>
-          <button className="panel-item-action remove" onClick={() => removeRoute(route.id)}>×</button>
-        </div>
-      ))}
+      {routes.map((route) => {
+        const progress = route.progress ?? 1
+        return (
+          <div key={route.id} className="panel-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+            {/* Top row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="color-dot" style={{ background: route.color }} />
+              <span style={{ fontSize: 15 }}>{MODE_LABELS[route.mode] || '🗺️'}</span>
+              <span className="panel-item-name">
+                {wpName(route.fromWaypointId)} → {wpName(route.toWaypointId)}
+              </span>
+            </div>
+
+            {/* Slider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 10, color: '#94a3b8', width: 18, flexShrink: 0 }}>0</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round(progress * 100)}
+                onChange={(e) => updateRoute(route.id, { progress: Number(e.target.value) / 100 })}
+                style={{ flex: 1, accentColor: route.color, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 10, color: '#94a3b8', width: 28, flexShrink: 0, textAlign: 'right' }}>
+                {Math.round(progress * 100)}%
+              </span>
+            </div>
+
+            {/* Actions row */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                className="panel-item-action animate"
+                style={{ flex: 1 }}
+                onClick={() => onPlaySingle(route.id)}
+              >
+                ▶ Play
+              </button>
+              <button
+                className="panel-item-action"
+                style={{
+                  flex: 1,
+                  background: route.queued ? '#fef3c7' : '#f1f5f9',
+                  color: route.queued ? '#d97706' : '#64748b',
+                  border: route.queued ? '1.5px solid #f59e0b' : '1.5px solid transparent',
+                }}
+                onClick={() => updateRoute(route.id, { queued: !route.queued })}
+              >
+                {route.queued ? '★ Queued' : '☆ Queue'}
+              </button>
+              <button
+                className="panel-item-action"
+                style={{ background: '#f8fafc', color: '#94a3b8' }}
+                onClick={() => updateRoute(route.id, { progress: 0 })}
+                title="Reset to start"
+              >
+                ↺
+              </button>
+              <button className="panel-item-action remove" onClick={() => removeRoute(route.id)}>×</button>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
