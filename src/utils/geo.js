@@ -57,16 +57,38 @@ export function easeInOut(t) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
 
+// FOSSGIS hosts the same per-profile OSRM instances that power
+// openstreetmap.org's directions — free, no API key, CORS-enabled. Each mode
+// hits a different instance so walking uses real pedestrian paths (footways,
+// park trails) instead of car roads. The {profile} URL segment is always
+// "driving" — OSRM ignores it; the routing comes from which instance you hit.
+const OSRM_HOSTS = {
+  driving: 'https://routing.openstreetmap.de/routed-car',
+  walking: 'https://routing.openstreetmap.de/routed-foot',
+  cycling: 'https://routing.openstreetmap.de/routed-bike',
+  transit: 'https://routing.openstreetmap.de/routed-car', // road proxy (no free transit routing)
+}
+
+async function fetchOSRM(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('OSRM error')
+  const data = await res.json()
+  if (data.routes?.[0]) return data.routes[0].geometry.coordinates
+  throw new Error('No route found')
+}
+
 export async function fetchRoadGeometry(from, to, mode) {
-  const profile = mode === 'walking' ? 'foot' : 'driving'
-  const url = `https://router.project-osrm.org/route/v1/${profile}/${from[0]},${from[1]};${to[0]},${to[1]}?geometries=geojson&overview=full`
+  const coords = `${from[0]},${from[1]};${to[0]},${to[1]}`
+  const base = OSRM_HOSTS[mode] || OSRM_HOSTS.driving
+  const params = 'geometries=geojson&overview=full'
   try {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error('OSRM error')
-    const data = await res.json()
-    if (data.routes?.[0]) return data.routes[0].geometry.coordinates
-    throw new Error('No route found')
+    return await fetchOSRM(`${base}/route/v1/driving/${coords}?${params}`)
   } catch {
-    return null
+    // Fallback: public OSRM demo (driving only) so we still draw a road path
+    try {
+      return await fetchOSRM(`https://router.project-osrm.org/route/v1/driving/${coords}?${params}`)
+    } catch {
+      return null
+    }
   }
 }

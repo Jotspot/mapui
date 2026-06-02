@@ -42,7 +42,17 @@ const useAppStore = create(
     }),
     {
       name: 'jetlag-map-store',
+      version: 1, // v1: walking routes use pedestrian routing — drop stale car geometry
       partialize: (s) => ({ teams: s.teams, waypoints: s.waypoints, routes: s.routes, speeds: s.speeds, mapStyle: s.mapStyle }),
+      migrate: (persisted, version) => {
+        if (persisted?.routes && version < 1) {
+          // Clear cached geometry for walking routes so they re-fetch real footpaths
+          persisted.routes = persisted.routes.map((r) =>
+            r.mode === 'walking' ? { ...r, geometry: null } : r
+          )
+        }
+        return persisted
+      },
       merge: (persisted, current) => ({
         ...current,
         ...persisted,
