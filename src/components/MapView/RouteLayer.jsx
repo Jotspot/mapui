@@ -105,12 +105,15 @@ export default function RouteLayer({ map, routes, waypoints, teams = [], teamMar
       if (!route?.geometry) return
       if (!initializedRoutes.current.has(id)) return
 
-      // Prefer the team marker as the moving dot
-      const team = teams.find((t) => t.waypointId === route.fromWaypointId)
+      // Prefer the team marker as the moving dot. Match by the route's explicit
+      // teamId — NOT the team's current position, which changes after each run.
+      const team = teams.find((t) => t.id === route.teamId)
       const teamMarkerEntry = team && teamMarkersRef?.current?.[team.id]
       let movingMarker
 
       if (teamMarkerEntry) {
+        // Snap the marker to the route start before it begins moving, then show it.
+        if (route.geometry?.[0]) teamMarkerEntry.marker.setLngLat(route.geometry[0])
         teamMarkerEntry.marker.getElement().style.display = ''
         movingMarker = teamMarkerEntry.marker
         // Hide the fallback dot while team marker is being used
