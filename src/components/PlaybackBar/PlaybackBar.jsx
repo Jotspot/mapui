@@ -3,7 +3,7 @@ import useAppStore from '../../store/useAppStore.js'
 
 const MODE_ICONS = { flight: '✈️', driving: '🚗', transit: '🚆', walking: '🚶' }
 
-export default function PlaybackBar({ isPlaying, animatingIds = [], onPlay, onPlayAll, onStop }) {
+export default function PlaybackBar({ isPlaying, isRecording, animatingIds = [], onPlay, onPlayAll, onStop, onRecord }) {
   const routes = useAppStore((s) => s.routes)
   const waypoints = useAppStore((s) => s.waypoints)
 
@@ -76,6 +76,23 @@ export default function PlaybackBar({ isPlaying, animatingIds = [], onPlay, onPl
 
         {queue.length > 0 && !isPlaying && (
           <span className="playback-step-info">{queue.length} queued</span>
+        )}
+
+        {/* Record button */}
+        {!isPlaying && !isRecording && (
+          <button
+            className="playback-record-btn"
+            onClick={onRecord}
+            title="Record all routes to a video file"
+          >
+            ⏺ Record
+          </button>
+        )}
+        {isRecording && (
+          <div className="playback-recording-indicator">
+            <span className="recording-dot" />
+            Recording…
+          </div>
         )}
       </div>
     </div>

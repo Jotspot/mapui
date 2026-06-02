@@ -11,7 +11,7 @@ const STYLE_URLS = {
   bright: 'https://tiles.openfreemap.org/styles/bright',
 }
 
-export default function MapView({ placingWaypoint, onMapClick, animatingIds, onAnimateComplete, speeds }) {
+export default function MapView({ placingWaypoint, onMapClick, animatingIds, onAnimateComplete, speeds, onMapReady }) {
   const teams = useAppStore((s) => s.teams)
   const waypoints = useAppStore((s) => s.waypoints)
   const routes = useAppStore((s) => s.routes)
@@ -46,11 +46,12 @@ export default function MapView({ placingWaypoint, onMapClick, animatingIds, onA
       animatingIds={animatingIds}
       onAnimateComplete={onAnimateComplete}
       speeds={speeds}
+      onMapReady={onMapReady}
     />
   )
 }
 
-function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMapClick, animatingIds, onAnimateComplete, speeds }) {
+function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMapClick, animatingIds, onAnimateComplete, speeds, onMapReady }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const [mapReady, setMapReady] = useState(false)
@@ -66,11 +67,15 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
       center: [0, 20],
       zoom: 2,
       attributionControl: false,
+      preserveDrawingBuffer: true,
     })
     map.addControl(new maplibregl.NavigationControl(), 'top-left')
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
     mapRef.current = map
-    map.on('load', () => setMapReady(true))
+    map.on('load', () => {
+      setMapReady(true)
+      onMapReady?.(map)
+    })
 
     return () => {
       Object.values(teamMarkersRef.current).forEach(({ marker }) => marker.remove())

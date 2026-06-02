@@ -20,9 +20,26 @@ export default function App() {
   const [animatingIds, setAnimatingIds] = useState([])
   const isPlaying = animatingIds.length > 0
 
+  // Video recording
+  const [isRecording, setIsRecording] = useState(false)
+  const mapInstanceRef = useRef(null)
+  const recorderRef = useRef(null)
+  const recordingActiveRef = useRef(false)
+
+  const handleMapReady = useCallback((map) => {
+    mapInstanceRef.current = map
+  }, [])
+
   // Called when one animation finishes
   const handleAnimateComplete = useCallback((finishedId) => {
-    setAnimatingIds((prev) => prev.filter((id) => id !== finishedId))
+    setAnimatingIds((prev) => {
+      const next = prev.filter((id) => id !== finishedId)
+      // Stop recording when all animations complete
+      if (next.length === 0 && recordingActiveRef.current && recorderRef.current?.state === 'recording') {
+        setTimeout(() => recorderRef.current?.stop(), 800)
+      }
+      return next
+    })
   }, [])
 
   // Play queued routes ALL AT ONCE (simultaneously)
@@ -50,6 +67,45 @@ export default function App() {
     setAnimatingIds([])
   }, [])
 
+  // Record all routes to a video file (captures the map canvas)
+  const handleRecord = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map || !routes.length) return
+
+    const canvas = map.getCanvas()
+    const stream = canvas.captureStream(30)
+
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4']
+      .find((t) => MediaRecorder.isTypeSupported(t)) || 'video/webm'
+
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 })
+    const chunks = []
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
+      a.download = `jetlag-map-${Date.now()}.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      setIsRecording(false)
+      recordingActiveRef.current = false
+    }
+
+    recorderRef.current = recorder
+    recordingActiveRef.current = true
+    setIsRecording(true)
+    recorder.start(100)
+
+    routes.forEach((r) => updateRoute(r.id, { progress: 0 }))
+    setAnimatingIds(routes.map((r) => r.id))
+  }, [routes, updateRoute])
+
   return (
     <>
       <MapView
@@ -64,6 +120,7 @@ export default function App() {
         animatingIds={animatingIds}
         onAnimateComplete={handleAnimateComplete}
         speeds={speeds}
+        onMapReady={handleMapReady}
       />
       <Sidebar
         onAddTeam={() => setModal({ type: 'team', data: null })}
@@ -75,10 +132,12 @@ export default function App() {
       />
       <PlaybackBar
         isPlaying={isPlaying}
+        isRecording={isRecording}
         animatingIds={animatingIds}
         onPlay={handlePlayQueue}
         onPlayAll={handlePlayAll}
         onStop={handleStop}
+        onRecord={handleRecord}
       />
 
       {placingWaypoint && (
