@@ -72,7 +72,16 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
   const styleUrl = STYLE_URLS[mapStyle?.openFreeStyle] || STYLE_URLS.liberty
 
   // --- Video recording: composite the WebGL map canvas with a 2D canvas that
-  //     redraws the pins (DOM markers are invisible to captureStream). ---
+  //     redraws the pins (DOM markers are invisible to captureStream).
+  //
+  //     The composite is a fixed 1920x1080 (16:9) frame. The map (which fills
+  //     whatever non-16:9 area the window leaves) is cover-fitted into it, and
+  //     the same transform is applied to pin positions.
+  //
+  //     Critically, the frame is drawn inside the map's 'render' event: at that
+  //     moment the WebGL drawing buffer is guaranteed to hold the just-rendered
+  //     scene. Copying from a separate rAF tick captures an empty buffer (which
+  //     is why earlier the base map didn't show up — only the 2D pins did). ---
   const recorderRef = useRef(null)
   const startRecording = useCallback(async ({ onStop } = {}) => {
     const map = mapRef.current
@@ -82,6 +91,16 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
     const w = mapCanvas.width
     const h = mapCanvas.height
     const s = mapCanvas.clientWidth ? w / mapCanvas.clientWidth : (window.devicePixelRatio || 1)
+
+    // 16:9 output frame
+    const OUT_W = 1920
+    const OUT_H = 1080
+    const scale = Math.max(OUT_W / w, OUT_H / h)   // cover-fit (fill frame, crop overflow)
+    const drawnW = w * scale
+    const drawnH = h * scale
+    const offsetX = (OUT_W - drawnW) / 2
+    const offsetY = (OUT_H - drawnH) / 2
+    const k = s * scale   // maps a CSS pixel (map.project units) to composite pixels
 
     // Preload team photos so they're ready to draw on the first frame.
     const photoImgs = {}
@@ -97,20 +116,20 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
     )
 
     const composite = document.createElement('canvas')
-    composite.width = w
-    composite.height = h
+    composite.width = OUT_W
+    composite.height = OUT_H
     const ctx = composite.getContext('2d')
 
-    let rafId = null
-    const drawFrame = () => {
-      ctx.clearRect(0, 0, w, h)
-      ctx.drawImage(mapCanvas, 0, 0)
+    const drawComposite = () => {
+      ctx.fillStyle = '#0f172a'        // backdrop (only visible if a letterbox edge appears)
+      ctx.fillRect(0, 0, OUT_W, OUT_H)
+      ctx.drawImage(mapCanvas, offsetX, offsetY, drawnW, drawnH)
 
       // Waypoint pins (skip hidden)
       waypointsRef.current.forEach((wp) => {
         if (wp.hidden) return
         const p = map.project([wp.lng, wp.lat])
-        drawWaypointMarker(ctx, p.x * s, p.y * s, wp, s)
+        drawWaypointMarker(ctx, offsetX + p.x * k, offsetY + p.y * k, wp, k)
       })
 
       // Team pins — read LIVE position from the marker (it moves during
@@ -119,23 +138,26 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
         const entry = teamMarkersRef.current[team.id]
         if (!entry) return
         if (entry.marker.getElement().style.display === 'none') return
-        const ll = entry.marker.getLngLat()
-        const p = map.project(ll)
-        drawTeamMarker(ctx, p.x * s, p.y * s, team, photoImgs[team.id], s)
+        const p = map.project(entry.marker.getLngLat())
+        drawTeamMarker(ctx, offsetX + p.x * k, offsetY + p.y * k, team, photoImgs[team.id], k)
       })
-
-      rafId = requestAnimationFrame(drawFrame)
     }
-    drawFrame()
+
+    // Draw once now, then on every map render (each animation frame triggers one).
+    drawComposite()
+    map.on('render', drawComposite)
+    // Keep the map's render loop ticking for the whole recording so frames keep
+    // flowing even during brief idle moments.
+    const keepAlive = () => { if (recorderRef.current?.state === 'recording') { map.triggerRepaint(); requestAnimationFrame(keepAlive) } }
 
     const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
       .find((t) => MediaRecorder.isTypeSupported(t)) || 'video/webm'
     const stream = composite.captureStream(30)
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 })
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 12_000_000 })
     const chunks = []
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
     recorder.onstop = () => {
-      if (rafId) cancelAnimationFrame(rafId)
+      map.off('render', drawComposite)
       const blob = new Blob(chunks, { type: mimeType })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -150,6 +172,7 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
 
     recorderRef.current = recorder
     recorder.start(100)
+    requestAnimationFrame(keepAlive)
     return true
   }, [])
 
