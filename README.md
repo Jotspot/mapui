@@ -1,16 +1,57 @@
-# React + Vite
+# Jetlag Map
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Animated broadcast-style map builder inspired by Jetlag: The Game. Drop city waypoints, create teams with photo pins, and animate routes between them with different transport modes. Export to video.
 
-Currently, two official plugins are available:
+**Live:** https://jotspot.github.io/mapui/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Teams** — add a name, color, and photo; pins appear as teardrop markers with circular photo crops
+- **Waypoints** — click the map to place city pins; hide/show individually
+- **Routes** — connect two waypoints with a transport mode (✈️ flight, 🚗 driving, 🚆 transit, 🚶 walking); road routes follow real streets via OSRM
+- **Animation** — animate individual routes or queue + play all at once; speed is configurable per mode
+- **Video export** — record animations to a composited video file; choose aspect ratio (16:9, 4:3, 1:1, 9:16) and resolution (720p, 1080p, 1440p)
+- **Map styles** — OpenFreeMap Liberty or Bright; optional Apple Maps with a MapKit JS token
+- **Label toggle** — hide all map text labels for a clean broadcast look
+- All data persists in `localStorage` — no account or backend needed
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Video Export Tips
 
-## Expanding the ESLint configuration
+- **Use Safari for higher bitrate.** Chrome's VP9 encoder silently caps output at ~2 Mbps regardless of the requested bitrate hint. Safari's encoder allocates significantly more bits, producing sharper exports — especially during fast route animations.
+- Firefox is untested but likely better than Chrome.
+- For archival quality, re-encode the `.webm` with ffmpeg after export:
+  ```
+  ffmpeg -i recording.webm -c:v libx264 -crf 18 output.mp4
+  ```
+- Higher resolution settings (1440p) force more data per frame and help with all browsers.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Running Locally
+
+```bash
+npm install
+npm run dev       # dev server with HMR at localhost:5173/mapui/
+npm run build     # production build → dist/
+npm run preview   # serve dist/ locally
+```
+
+## Deployment
+
+Pushing to `claude/elegant-shannon-JuO5l` triggers `.github/workflows/deploy.yml`, which builds and deploys `dist/` to the `gh-pages` branch. GitHub Pages serves from that branch at https://jotspot.github.io/mapui/.
+
+## Architecture
+
+Single-page React + Vite app — no router, no backend, no required API keys.
+
+| Layer | Tech |
+|---|---|
+| Map rendering | MapLibre GL JS + OpenFreeMap vector tiles |
+| State + persistence | Zustand with `persist` middleware → `localStorage` |
+| Road routing | OSRM public API (FOSSGIS instances, no key needed) |
+| Video capture | `MediaRecorder` + canvas compositing |
+
+Key files:
+- `src/store/useAppStore.js` — all app state (teams, waypoints, routes, speeds, mapStyle)
+- `src/components/MapView/MapView.jsx` — map init, marker lifecycle, video recording
+- `src/components/MapView/RouteLayer.jsx` — GeoJSON route sources/layers per route
+- `src/components/MapView/RouteAnimator.js` — rAF animation engine
+- `src/utils/geo.js` — great-circle arcs, arc-length resampling, OSRM fetch
