@@ -22,21 +22,21 @@ export default function App() {
 
   // Video recording
   const [isRecording, setIsRecording] = useState(false)
-  const mapInstanceRef = useRef(null)
-  const recorderRef = useRef(null)
+  const recorderControlRef = useRef(null)   // { map, startRecording, stopRecording }
   const recordingActiveRef = useRef(false)
 
-  const handleMapReady = useCallback((map) => {
-    mapInstanceRef.current = map
+  const handleMapReady = useCallback((control) => {
+    recorderControlRef.current = control
   }, [])
 
   // Called when one animation finishes
   const handleAnimateComplete = useCallback((finishedId) => {
     setAnimatingIds((prev) => {
       const next = prev.filter((id) => id !== finishedId)
-      // Stop recording when all animations complete
-      if (next.length === 0 && recordingActiveRef.current && recorderRef.current?.state === 'recording') {
-        setTimeout(() => recorderRef.current?.stop(), 800)
+      // Stop recording shortly after the last animation finishes (tail frames).
+      if (next.length === 0 && recordingActiveRef.current) {
+        recordingActiveRef.current = false
+        setTimeout(() => recorderControlRef.current?.stopRecording(), 800)
       }
       return next
     })
@@ -67,40 +67,22 @@ export default function App() {
     setAnimatingIds([])
   }, [])
 
-  // Record all routes to a video file (captures the map canvas)
-  const handleRecord = useCallback(() => {
-    const map = mapInstanceRef.current
-    if (!map || !routes.length) return
+  // Record all routes to a video file. The map composites its WebGL canvas
+  // with the pin overlays, plays every route, and downloads a .webm when done.
+  const handleRecord = useCallback(async () => {
+    const control = recorderControlRef.current
+    if (!control || !routes.length) return
 
-    const canvas = map.getCanvas()
-    const stream = canvas.captureStream(30)
-
-    const mimeType = ['video/webm;codecs=vp9', 'video/webm', 'video/mp4']
-      .find((t) => MediaRecorder.isTypeSupported(t)) || 'video/webm'
-
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 })
-    const chunks = []
-
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
-    recorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
-      a.download = `jetlag-map-${Date.now()}.${ext}`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      setIsRecording(false)
-      recordingActiveRef.current = false
+    const started = await control.startRecording({
+      onStop: () => setIsRecording(false),
+    })
+    if (!started) {
+      alert('Recording is not supported in this browser.')
+      return
     }
 
-    recorderRef.current = recorder
     recordingActiveRef.current = true
     setIsRecording(true)
-    recorder.start(100)
 
     routes.forEach((r) => updateRoute(r.id, { progress: 0 }))
     setAnimatingIds(routes.map((r) => r.id))

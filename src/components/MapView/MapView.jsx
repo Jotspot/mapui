@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import maplibregl from 'maplibre-gl'
 import './MapView.css'
 import RouteLayer from './RouteLayer.jsx'
 import AppleMapView from './AppleMapView.jsx'
 import { createTeamMarkerEl, updateTeamMarkerEl, createWaypointMarkerEl, updateWaypointMarkerEl } from './markerUtils.js'
+import { drawTeamMarker, drawWaypointMarker } from './markerCanvas.js'
 import useAppStore from '../../store/useAppStore.js'
 
 const STYLE_URLS = {
@@ -58,7 +59,103 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
   const teamMarkersRef = useRef({})   // id → { marker, el }
   const waypointMarkersRef = useRef({}) // id → { marker, el }
 
+  // Live data refs so the recorder can read current teams/waypoints without
+  // re-creating its callbacks each render.
+  const teamsRef = useRef(teams)
+  const waypointsRef = useRef(waypoints)
+  useEffect(() => { teamsRef.current = teams }, [teams])
+  useEffect(() => { waypointsRef.current = waypoints }, [waypoints])
+
+  const setMapStyle = useAppStore((s) => s.setMapStyle)
+  const labelsHidden = !!mapStyle?.labelsHidden
+
   const styleUrl = STYLE_URLS[mapStyle?.openFreeStyle] || STYLE_URLS.liberty
+
+  // --- Video recording: composite the WebGL map canvas with a 2D canvas that
+  //     redraws the pins (DOM markers are invisible to captureStream). ---
+  const recorderRef = useRef(null)
+  const startRecording = useCallback(async ({ onStop } = {}) => {
+    const map = mapRef.current
+    if (!map || typeof MediaRecorder === 'undefined') return false
+
+    const mapCanvas = map.getCanvas()
+    const w = mapCanvas.width
+    const h = mapCanvas.height
+    const s = mapCanvas.clientWidth ? w / mapCanvas.clientWidth : (window.devicePixelRatio || 1)
+
+    // Preload team photos so they're ready to draw on the first frame.
+    const photoImgs = {}
+    await Promise.all(
+      teamsRef.current
+        .filter((t) => t.photoDataUrl)
+        .map((t) => new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => { photoImgs[t.id] = img; resolve() }
+          img.onerror = () => resolve()
+          img.src = t.photoDataUrl
+        }))
+    )
+
+    const composite = document.createElement('canvas')
+    composite.width = w
+    composite.height = h
+    const ctx = composite.getContext('2d')
+
+    let rafId = null
+    const drawFrame = () => {
+      ctx.clearRect(0, 0, w, h)
+      ctx.drawImage(mapCanvas, 0, 0)
+
+      // Waypoint pins (skip hidden)
+      waypointsRef.current.forEach((wp) => {
+        if (wp.hidden) return
+        const p = map.project([wp.lng, wp.lat])
+        drawWaypointMarker(ctx, p.x * s, p.y * s, wp, s)
+      })
+
+      // Team pins — read LIVE position from the marker (it moves during
+      // animation) and skip ones currently hidden.
+      teamsRef.current.forEach((team) => {
+        const entry = teamMarkersRef.current[team.id]
+        if (!entry) return
+        if (entry.marker.getElement().style.display === 'none') return
+        const ll = entry.marker.getLngLat()
+        const p = map.project(ll)
+        drawTeamMarker(ctx, p.x * s, p.y * s, team, photoImgs[team.id], s)
+      })
+
+      rafId = requestAnimationFrame(drawFrame)
+    }
+    drawFrame()
+
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+      .find((t) => MediaRecorder.isTypeSupported(t)) || 'video/webm'
+    const stream = composite.captureStream(30)
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 })
+    const chunks = []
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+    recorder.onstop = () => {
+      if (rafId) cancelAnimationFrame(rafId)
+      const blob = new Blob(chunks, { type: mimeType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `jetlag-map-${Date.now()}.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      onStop?.()
+    }
+
+    recorderRef.current = recorder
+    recorder.start(100)
+    return true
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+  }, [])
 
   useEffect(() => {
     const map = new maplibregl.Map({
@@ -74,7 +171,7 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
     mapRef.current = map
     map.on('load', () => {
       setMapReady(true)
-      onMapReady?.(map)
+      onMapReady?.({ map, startRecording, stopRecording })
     })
 
     return () => {
@@ -83,6 +180,24 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
       map.remove()
     }
   }, [])
+
+  // Toggle visibility of every symbol (label/icon) layer in the base style.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    const apply = () => {
+      const layers = map.getStyle()?.layers || []
+      layers.forEach((l) => {
+        if (l.type === 'symbol') {
+          try {
+            map.setLayoutProperty(l.id, 'visibility', labelsHidden ? 'none' : 'visible')
+          } catch { /* layer may not accept the property; ignore */ }
+        }
+      })
+    }
+    if (map.isStyleLoaded()) apply()
+    else map.once('idle', apply)
+  }, [labelsHidden, mapReady])
 
   useEffect(() => {
     const map = mapRef.current
@@ -161,6 +276,13 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
 
   return (
     <div ref={containerRef} className={`map-container${placingWaypoint ? ' placing' : ''}`}>
+      <button
+        className={`map-label-toggle${labelsHidden ? ' active' : ''}`}
+        onClick={() => setMapStyle({ labelsHidden: !labelsHidden })}
+        title={labelsHidden ? 'Show map labels' : 'Hide map labels'}
+      >
+        {labelsHidden ? '🏷️ Labels off' : '🏷️ Labels on'}
+      </button>
       {mapReady && (
         <RouteLayer
           map={mapRef.current}
