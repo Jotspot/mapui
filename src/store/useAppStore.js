@@ -5,7 +5,7 @@ let idCounter = Date.now()
 const uid = () => (++idCounter).toString(36)
 
 const DEFAULT_SPEEDS = { flight: 6, driving: 4, transit: 5, walking: 8 } // seconds
-const DEFAULT_MAP_STYLE = { provider: 'openfreemap', openFreeStyle: 'liberty', appleToken: '', labelsHidden: false }
+const DEFAULT_MAP_STYLE = { provider: 'openfreemap', openFreeStyle: 'liberty', appleToken: '', labelsHidden: false, recordingAspect: '16:9', recordingResolution: '1080p' }
 
 const useAppStore = create(
   persist(

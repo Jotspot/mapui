@@ -126,6 +126,64 @@ export default function SettingsPanel() {
         </div>
       </div>
 
+      {/* Export Video */}
+      <div>
+        <p style={sectionHead}>📹 Export Video</p>
+
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>Aspect ratio</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['16:9', '4:3', '1:1', '9:16'].map((ar) => (
+              <button
+                key={ar}
+                onClick={() => setMapStyle({ recordingAspect: ar })}
+                style={{
+                  flex: 1, padding: '7px 0', borderRadius: 7, border: '1.5px solid',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  background: mapStyle?.recordingAspect === ar ? '#eff6ff' : '#f8fafc',
+                  borderColor: mapStyle?.recordingAspect === ar ? '#3b82f6' : '#e2e8f0',
+                  color: mapStyle?.recordingAspect === ar ? '#2563eb' : '#64748b',
+                }}
+              >
+                {ar}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>Resolution</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['720p', '1080p', '1440p'].map((res) => (
+              <button
+                key={res}
+                onClick={() => setMapStyle({ recordingResolution: res })}
+                style={{
+                  flex: 1, padding: '7px 0', borderRadius: 7, border: '1.5px solid',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  background: mapStyle?.recordingResolution === res ? '#eff6ff' : '#f8fafc',
+                  borderColor: mapStyle?.recordingResolution === res ? '#3b82f6' : '#e2e8f0',
+                  color: mapStyle?.recordingResolution === res ? '#2563eb' : '#64748b',
+                }}
+              >
+                {res}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8' }}>
+          {(() => {
+            const ar = mapStyle?.recordingAspect || '16:9'
+            const res = mapStyle?.recordingResolution || '1080p'
+            const h = { '720p': 720, '1080p': 1080, '1440p': 1440 }[res] || 1080
+            const [aw, ah] = { '16:9': [16,9], '4:3': [4,3], '1:1': [1,1], '9:16': [9,16] }[ar] || [16,9]
+            const w = Math.round(h * aw / ah)
+            return `Output: ${w} × ${h} px`
+          })()}
+        </div>
+      </div>
+
     </div>
   )
 }

@@ -12,6 +12,14 @@ const STYLE_URLS = {
   bright: 'https://tiles.openfreemap.org/styles/bright',
 }
 
+const OUTPUT_AR = { '16:9': [16,9], '4:3': [4,3], '1:1': [1,1], '9:16': [9,16] }
+const OUTPUT_RES_H = { '720p': 720, '1080p': 1080, '1440p': 1440 }
+function outputDims(aspect, res) {
+  const [aw, ah] = OUTPUT_AR[aspect] || OUTPUT_AR['16:9']
+  const h = OUTPUT_RES_H[res] || 1080
+  return { w: Math.round(h * aw / ah), h }
+}
+
 export default function MapView({ placingWaypoint, onMapClick, animatingIds, onAnimateComplete, speeds, onMapReady }) {
   const teams = useAppStore((s) => s.teams)
   const waypoints = useAppStore((s) => s.waypoints)
@@ -59,12 +67,14 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
   const teamMarkersRef = useRef({})   // id → { marker, el }
   const waypointMarkersRef = useRef({}) // id → { marker, el }
 
-  // Live data refs so the recorder can read current teams/waypoints without
+  // Live data refs so the recorder can read current values without
   // re-creating its callbacks each render.
   const teamsRef = useRef(teams)
   const waypointsRef = useRef(waypoints)
+  const mapStyleRef = useRef(mapStyle)
   useEffect(() => { teamsRef.current = teams }, [teams])
   useEffect(() => { waypointsRef.current = waypoints }, [waypoints])
+  useEffect(() => { mapStyleRef.current = mapStyle }, [mapStyle])
 
   const setMapStyle = useAppStore((s) => s.setMapStyle)
   const labelsHidden = !!mapStyle?.labelsHidden
@@ -92,9 +102,9 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
     const h = mapCanvas.height
     const s = mapCanvas.clientWidth ? w / mapCanvas.clientWidth : (window.devicePixelRatio || 1)
 
-    // 16:9 output frame
-    const OUT_W = 1920
-    const OUT_H = 1080
+    // Output frame dimensions from persisted settings
+    const { recordingAspect = '16:9', recordingResolution = '1080p' } = mapStyleRef.current || {}
+    const { w: OUT_W, h: OUT_H } = outputDims(recordingAspect, recordingResolution)
     const scale = Math.max(OUT_W / w, OUT_H / h)   // cover-fit (fill frame, crop overflow)
     const drawnW = w * scale
     const drawnH = h * scale
