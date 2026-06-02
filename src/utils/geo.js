@@ -57,6 +57,33 @@ export function easeInOut(t) {
   return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
 }
 
+// Resample `coords` to `numPoints` evenly-spaced points by arc length.
+// OSRM road geometry clusters points densely at turns and sparsely on
+// straights; index-based animation therefore slows at bends and speeds
+// on straights. Resampling by distance normalises this so t=0.5 always
+// means "half the actual road distance travelled".
+export function resampleByDistance(coords, numPoints = 300) {
+  if (coords.length < 2) return coords
+  const dists = [0]
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i][0] - coords[i - 1][0]
+    const dy = coords[i][1] - coords[i - 1][1]
+    dists.push(dists[i - 1] + Math.sqrt(dx * dx + dy * dy))
+  }
+  const total = dists[dists.length - 1]
+  if (total === 0) return coords
+  const result = [coords[0]]
+  let j = 0
+  for (let i = 1; i < numPoints - 1; i++) {
+    const target = (i / (numPoints - 1)) * total
+    while (j < dists.length - 2 && dists[j + 1] < target) j++
+    const frac = (target - dists[j]) / (dists[j + 1] - dists[j])
+    result.push(interpolateCoord(coords[j], coords[j + 1], frac))
+  }
+  result.push(coords[coords.length - 1])
+  return result
+}
+
 // FOSSGIS hosts the same per-profile OSRM instances that power
 // openstreetmap.org's directions — free, no API key, CORS-enabled. Each mode
 // hits a different instance so walking uses real pedestrian paths (footways,

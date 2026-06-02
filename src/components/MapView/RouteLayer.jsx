@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import maplibregl from 'maplibre-gl'
 import { getRouteLayerSpecs } from '../../utils/routeStyles.js'
-import { greatCircleArc, fetchRoadGeometry, sliceCoords } from '../../utils/geo.js'
+import { greatCircleArc, fetchRoadGeometry, sliceCoords, resampleByDistance } from '../../utils/geo.js'
 import { RouteAnimator } from './RouteAnimator.js'
 import useAppStore from '../../store/useAppStore.js'
 import { createTeamMarkerEl } from './markerUtils.js'
@@ -34,7 +34,7 @@ export default function RouteLayer({ map, routes, waypoints, teams = [], teamMar
           coords = greatCircleArc([from.lng, from.lat], [to.lng, to.lat])
         } else {
           const road = await fetchRoadGeometry([from.lng, from.lat], [to.lng, to.lat], route.mode)
-          coords = road || greatCircleArc([from.lng, from.lat], [to.lng, to.lat])
+          coords = road ? resampleByDistance(road) : greatCircleArc([from.lng, from.lat], [to.lng, to.lat])
         }
         updateRoute(route.id, { geometry: coords })
       }
