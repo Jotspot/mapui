@@ -151,6 +151,25 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
         const p = map.project(entry.marker.getLngLat())
         drawTeamMarker(ctx, offsetX + p.x * k, offsetY + p.y * k, team, photoImgs[team.id], k)
       })
+
+      // Attribution — required by OpenStreetMap/OSRM usage terms
+      const attrText = '© OpenStreetMap contributors'
+      const attrFontSize = Math.max(11, Math.round(OUT_H * 0.012))
+      ctx.save()
+      ctx.font = `${attrFontSize}px -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif`
+      ctx.textBaseline = 'bottom'
+      ctx.textAlign = 'right'
+      const attrW = ctx.measureText(attrText).width + 14
+      const attrH = attrFontSize + 8
+      const attrX = OUT_W - 6
+      const attrY = OUT_H - 6
+      ctx.fillStyle = 'rgba(255,255,255,0.82)'
+      ctx.beginPath()
+      ctx.roundRect(attrX - attrW, attrY - attrH, attrW, attrH, 3)
+      ctx.fill()
+      ctx.fillStyle = '#333'
+      ctx.fillText(attrText, attrX - 7, attrY - 4)
+      ctx.restore()
     }
 
     // Draw once now, then on every map render (each animation frame triggers one).
@@ -200,7 +219,7 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
       preserveDrawingBuffer: true,
     })
     map.addControl(new maplibregl.NavigationControl(), 'top-left')
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
+    map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right')
     mapRef.current = map
     map.on('load', () => {
       setMapReady(true)

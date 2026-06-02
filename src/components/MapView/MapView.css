@@ -13,6 +13,11 @@
   height: 100%;
 }
 
+/* Lift attribution above the PlaybackBar (~56px) so it's always visible */
+.map-container .maplibregl-ctrl-bottom-right {
+  bottom: 60px;
+}
+
 .map-label-toggle {
   position: absolute;
   top: 12px;
