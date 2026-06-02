@@ -142,11 +142,13 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
         const { marker, el } = waypointMarkersRef.current[wp.id]
         marker.setLngLat([wp.lng, wp.lat])
         updateWaypointMarkerEl(el, wp)
+        marker.getElement().style.display = wp.hidden ? 'none' : ''
       } else {
         const el = createWaypointMarkerEl(wp)
         const marker = new maplibregl.Marker({ element: el, anchor: 'top-left' })
           .setLngLat([wp.lng, wp.lat])
           .addTo(map)
+        if (wp.hidden) marker.getElement().style.display = 'none'
         waypointMarkersRef.current[wp.id] = { marker, el }
       }
     })
