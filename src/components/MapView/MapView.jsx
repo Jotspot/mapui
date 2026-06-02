@@ -144,7 +144,7 @@ function MapLibreMap({ teams, waypoints, routes, mapStyle, placingWaypoint, onMa
         updateWaypointMarkerEl(el, wp)
       } else {
         const el = createWaypointMarkerEl(wp)
-        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+        const marker = new maplibregl.Marker({ element: el, anchor: 'top-left' })
           .setLngLat([wp.lng, wp.lat])
           .addTo(map)
         waypointMarkersRef.current[wp.id] = { marker, el }
