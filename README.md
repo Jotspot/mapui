@@ -19,11 +19,6 @@ Animated broadcast-style map builder inspired by Jetlag: The Game. Drop city way
 
 - **Use Safari for higher bitrate.** Chrome's VP9 encoder silently caps output at ~2 Mbps regardless of the requested bitrate hint. Safari's encoder allocates significantly more bits, producing sharper exports — especially during fast route animations.
 - Firefox is untested but likely better than Chrome.
-- For archival quality, re-encode the `.webm` with ffmpeg after export:
-  ```
-  ffmpeg -i recording.webm -c:v libx264 -crf 18 output.mp4
-  ```
-- Higher resolution settings (1440p) force more data per frame and help with all browsers.
 
 ## Running Locally
 
@@ -33,10 +28,6 @@ npm run dev       # dev server with HMR at localhost:5173/mapui/
 npm run build     # production build → dist/
 npm run preview   # serve dist/ locally
 ```
-
-## Deployment
-
-Pushing to `claude/elegant-shannon-JuO5l` triggers `.github/workflows/deploy.yml`, which builds and deploys `dist/` to the `gh-pages` branch. GitHub Pages serves from that branch at https://jotspot.github.io/mapui/.
 
 ## Architecture
 
